@@ -68,7 +68,7 @@ def proxy_create():
     except Exception as e:
         print "[*] Hmm: %s" % str(e)              
     socket_bind(server_proxy_in,l_port_proxy_in)
-    conn_rshell[0].send('PROXY '+ str(l_port_proxy_in)) 
+#    conn_rshell[0].send('PROXY '+ str(l_port_proxy_in)) 
     socket_accept(server_proxy_in, conn_proxy_in)
     conn_proxy_in[0].settimeout(PROXY_TIMEOUT)
     flag = 'None'
@@ -76,18 +76,8 @@ def proxy_create():
     p.start()
     processes.append(p)    
 
-def rshell_create():
-    global l_port_rshell
-    try:
-        server_rshell[0] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        l_port_rshell = raw_input('Enter a port to receive connections from remote host: ')
-        if l_port_rshell == '':
-            socket_create()
-        l_port_rshell = int(l_port_rshell)
-    except Exception as e:
-        print "[*] Hmm: %s" % str(e)              
-    socket_bind(server_rshell,l_port_rshell)
-    socket_accept(server_rshell, conn_rshell)
+def menu_create():
+    print 'making menu....\n'
 
 def socket_bind(server,port):
     try:
@@ -107,28 +97,27 @@ def socket_accept(server, conn):
     except Exception as e:
         print "[*] Hmm: %s\n" % str(e)
 
-def rshell(input):    
-    conn_rshell[0].settimeout(RSHELL_TIMEOUT)
+def menu(input):    
     global running
     running = True
     while running:
-        cmd = raw_input("[*]" + str(r_proxy_addr[0]) + " > ")
+        cmd = raw_input("[*]" + str(hosts[0]) + " > ")
         if cmd == "quit":
-            conn_rshell[0].close()
-            server_rshell[0].close()
-            running = False
+            shutdown()
         elif cmd == "proxy":
             proxy_create()
         else:
-            try:
-                conn_rshell[0].send(cmd)
-                print "[*] response: \n" + conn_rshell[0].recv(14336) + "\n"
-            except Exception as e:
-                print "[*] hmm..: %s\n" % str(e)
+            print "[*] Not Implemented: %s" % cmd
+
+def shutdown():
+    conn.close()
+    server.close()
+    running = False
+
 
 def main():
-    rshell_create()
-    rshell('')    
+    menu_create()
+    menu('')    
     for proc in processes:
         proc.join
     sys.exit()

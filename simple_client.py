@@ -5,8 +5,6 @@
 import socket,ssl
 HOST_IP = "127.0.0.1"
 HOST_P = 12345
-PROXY_IP = "192.168.0.1"
-PROXY_P = 8000
 s1=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 s1.connect((HOST_IP,HOST_P))
 while 1:
