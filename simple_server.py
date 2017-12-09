@@ -37,36 +37,42 @@ def srv():
     print "[*] Set your browser proxy to %s:%s to proxy through the remote machine\n" % (PHOST, PPORT)
         
     while True:
-        s2=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        import ssl
+        s2=socket.socket()
+        s2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)       
         s2.bind((PHOST,PPORT))
         s2.listen(1)
         print "listening...\n"
-        c2 = s2.accept()[0]
-        print "connection accepted...\n"
-        data = c2.recv(1000000)
-        print "data received...\n"
-        if data:
-            print "handling data...\n"
-            h = 'HTTP/1.1 200 OK\n'
-            h += 'Content-Type: text/html; charset=utf-8'
-            h += 'Connection: close\n\n'
-            r = h + '<h1>No Response</h1>' 
-            try:
-                import base64
-                d64=base64.encodestring(data)
-                c1.send(d64)
-                r = c1.recv(1000000)
-                r = base64.decodestring(r) 
-	    except Exception as e:
-                print str(e)   
-                r += '\n<pre>' + str(e) + '</pre>'            
-                r += '\n<pre>' + data + '</pre>'            
-            c2.send(r)
-        c2.close()
-        s2.close()
-                       
-
+        c2, h = s2.accept()
+        print "[*] Connection from %s \n" % h[0]
+        """
+        connstream = ssl.wrap_socket(c2,server_side=True,certfile="server.crt",keyfile="server.key")
+        try:
+            data = connstream.read()
+            print "data received...\n"
+            if data:
+                print "handling data...\n"
+                h = 'HTTP/1.1 200 OK\n'
+                h += 'Content-Type: text/html; charset=utf-8'
+                h += 'Connection: close\n\n'
+                r = h + '<h1>No Response</h1>' 
+                try:
+                    import base64
+                    d64=base64.encodestring(data)
+                    c1.send(d64)
+                    r = c1.recv(1000000)
+                    r = base64.decodestring(r) 
+	        except Exception as e:
+                    print str(e)   
+                    r += '\n<pre>' + str(e) + '</pre>'            
+                    r += '\n<pre>' + data + '</pre>'            
+                c2.send(r)
+            c2.close()
+            s2.close()                       
+        finally:
+            connstream.shutdown(socket.SHUT_RDWR)
+            connstream.close()
+        """
 
 
 srv()
