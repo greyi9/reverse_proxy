@@ -584,7 +584,7 @@ class HTTP(TCP):
         proc.start()
         logger.debug('Started process %r to handle connection %r' % (proc, client.conn))
 
-class ReverseConnectionManager(object):
+class ReverseConnectionManager(TCP):
     """TCP server implementation managing connections to reverse server.
     
     Used to accepts connections from the reverse server on target machine and also 
@@ -592,54 +592,39 @@ class ReverseConnectionManager(object):
     proxy processes.
     """
 
-    def __init__(self, interprocess_host='127.0.0.1', interprocess_port=60000, \
-                            exposed_host='0.0.0.0', exposed_port=1337, backlog=100):
-        self.exposed_host = exposed_host
-        self.exposed_port = exposed_port
-        self.localhost = localhost
-        self.interprocess_port = interprocess_port
-        self.backlog = backlog
-    
-    def handle_process(self, client):
+    def __init__(self):
+        super(ReverseConnectionManager, self).__init__(hostname='0.0.0.0',port=1337)
+        self.reverse_connection = None
+
+    def handle(self, client):
+        #cstatus = get_connection_status()
+        #if cstatus == NO_CONNECTION:
+        #    try to confirm reverse shell
+        #elif cstatus == CONFIRMED_CONNECTION:
+        #    start sharing the connection
+        #elif cstatus == SHARING_CONNECTION:
+        #    ignore?
+        #else:
+        #    ignore?
+        #    
         #Start a new process and pass the target host,port, and reverse server address
         #
         raise NotImplementedError()
     
-    def handle_reverse(self, client):
-        try:
-            logger.info('Starting interprocess listener on port %d' % self.interprocess_port)
-            self.socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket2.bind((self.interprocess_host, self.interprocess_port))
-            self.socket2.listen(self.backlog)
-            while True:
-                conn2, addr2 = self.socket.accept()
-                logger.debug('Accepted connection %r at address %r' % (conn2, addr2))
-                client_process = Client(conn2, addr2)
-                self.handle(client_process)
-        except Exception as e:
-            logger.exception('Exception while running the server %r' % e)
-        finally:
-            logger.info('Closing server socket')
-            self.socket2.close()
+"""
+from multiprocessing import Process, Pipe
 
-    def run(self):
-        try:
-            logger.info('Starting reverse listener on port %d' % self.exposed_port)
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket.bind((self.exposed_host, self.exposed_port))
-            self.socket.listen(self.backlog)
-            while True:
-                conn, addr = self.socket.accept()
-                logger.debug('Accepted connection %r at address %r' % (conn, addr))
-                client = Client(conn, addr)
-                self.handle_reverse(client)
-        except Exception as e:
-            logger.exception('Exception while running the server %r' % e)
-        finally:
-            logger.info('Closing server socket')
-            self.socket.close()
+def f(conn):
+    conn.send([42, None, 'hello'])
+    conn.close()
+
+if __name__ == '__main__':
+    parent_conn, child_conn = Pipe()
+    p = Process(target=f, args=(child_conn,))
+    p.start()
+    print(parent_conn.recv())   # prints "[42, None, 'hello']"
+    p.join()
+"""
 
 
 
