@@ -70,6 +70,12 @@ CHUNK_PARSER_STATE_WAITING_FOR_DATA = 2
 CHUNK_PARSER_STATE_COMPLETE = 3
 
 
+NO_CONNECTION = 1
+ESTABLISHING_CONNECTION = 2
+CONFIRMED_CONNECTION = 3
+SHARING_CONNECTION = 4
+
+
 class ChunkParser(object):
     """HTTP chunked encoding response parser."""
     
@@ -280,7 +286,18 @@ class Connection(object):
         logger.debug('flushed %d bytes to %s' % (sent, self.what))
 
 class ReverseServer(Connection):
-    """Establish connection to destination server."""
+    """Establish connection to destination server.
+    
+    The proxy creates a reverseserver with the target host:port when a request to that
+    host fails (ie, cannot access it without reverse proxy). Ideally will also add the
+    host or domain to a list to keep track of what hosts need to be reverse proxied
+
+    Connect method of the ReverseServer instance is called to establish a connection
+    to the remote host.  In this case, we will need to take in the location of the
+    destination server, then use an already established reverse connection to the 
+    exploited machine to ask that machine to establish the connection and start
+    a proxy process.  Maybe easier to start without a multiprocessed client to start.
+    """
     
     def __init__(self, host, port):
         super(ReverseServer, self).__init__(b'reverse')
@@ -289,10 +306,7 @@ class ReverseServer(Connection):
     def connect(self):
         #connect to manager, send self.addr
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-        self.conn.connect(management_srvr_addr)
-        self.connections = []
-        self.connections[0] = self.conn 
-        self.connections[1] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logger.debug('socket created in reverse server for connection to %s') % (str(self.addr))
 
 class Server(Connection):
     """Establish connection to destination server."""
@@ -591,42 +605,28 @@ class ReverseConnectionManager(TCP):
     receive interprocess communication to share access to reverse server between
     proxy processes.
     """
-
+    
     def __init__(self):
         super(ReverseConnectionManager, self).__init__(hostname='0.0.0.0',port=1337)
         self.reverse_connection = None
 
+
+    """Connection accepted from target host where we want to run the reverse connection from
+       
+    client in this case is the *potential* reverse shell target
+    """
     def handle(self, client):
-        #cstatus = get_connection_status()
-        #if cstatus == NO_CONNECTION:
-        #    try to confirm reverse shell
-        #elif cstatus == CONFIRMED_CONNECTION:
-        #    start sharing the connection
-        #elif cstatus == SHARING_CONNECTION:
-        #    ignore?
-        #else:
-        #    ignore?
-        #    
-        #Start a new process and pass the target host,port, and reverse server address
-        #
-        raise NotImplementedError()
-    
-"""
-from multiprocessing import Process, Pipe
-
-def f(conn):
-    conn.send([42, None, 'hello'])
-    conn.close()
-
-if __name__ == '__main__':
-    parent_conn, child_conn = Pipe()
-    p = Process(target=f, args=(child_conn,))
-    p.start()
-    print(parent_conn.recv())   # prints "[42, None, 'hello']"
-    p.join()
-"""
-
-
+        logger.debug('try to confirm reverse shell')
+        cstatus = 'SOME FUNCTION THAT IS NOT WRITTEN YET'
+        if cstatus == NO_CONNECTION:
+            logger.debug('try to confirm reverse shell')
+        elif cstatus == CONFIRMED_CONNECTION:
+            logger.debug('start sharing the connection')
+        elif cstatus == SHARING_CONNECTION:
+            logger.debug('ignore?   this should never happen, passing connection to ')
+        else:
+            logger.debug('we have hit the else, maybe cstatus is Null?')
+            
 
 def main():
     parser = argparse.ArgumentParser(
@@ -650,8 +650,6 @@ def main():
     listener_ip = args.listener_ip
     listener_port = listener_port
 
-    
-    management_srvr_addr
     try:
         conn_man = ReverseConnectionManager(hostname, 60000, listener_ip, listener_port) 
         try:
